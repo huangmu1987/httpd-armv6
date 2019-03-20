@@ -1,89 +1,115 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 
-<html xmlns="http://www.w3.org/1999/xhtml"> 
-<head>
- <title>JS1k: Breathing Galaxies (1013 bytes)</title>
- <script type="text/javascript">
-window.onload = function () {
-	C = Math.cos; // cache Math objects
-	S = Math.sin;
-	U = 0;
-	w = window;
-	j = document;
-	d = j.getElementById("c");
-	c = d.getContext("2d");
-	W = d.width = w.innerWidth;
-	H = d.height = w.innerHeight;
-	c.fillRect(0, 0, W, H); // resize <canvas> and draw black rect (default)
-	c.globalCompositeOperation = "lighter"; // switch to additive color application
-	c.lineWidth = 0.2;
-	c.lineCap = "round";
-	var bool = 0, 
-		t = 0; // theta
-	d.onmousemove = function (e) {
-		if(window.T) {
-			if(D==9) { D=Math.random()*15; f(1); }
-			clearTimeout(T);
-		}
-		X = e.pageX; // grab mouse pixel coords
-		Y = e.pageY;
-		a=0; // previous coord.x
-		b=0; // previous coord.y 
-		A = X, // original coord.x
-		B = Y; // original coord.y
-		R=(e.pageX/W * 999>>0)/999;
-		r=(e.pageY/H * 999>>0)/999;
-		U=e.pageX/H * 360 >>0;
-		D=9;
-		g = 360 * Math.PI / 180;
-		T = setInterval(f = function (e) { // start looping spectrum
-			c.save();
-			c.globalCompositeOperation = "source-over"; // switch to additive color application
-			if(e!=1) {
-				c.fillStyle = "rgba(0,0,0,0.02)";
-				c.fillRect(0, 0, W, H); // resize <canvas> and draw black rect (default)
-			}
-			c.restore();
-			i = 25; while(i --) {
-				c.beginPath();
-				if(D > 450 || bool) { // decrease diameter
-					if(!bool) { // has hit maximum
-						bool = 1;
-					}
-					if(D < 0.1) { // has hit minimum
-						bool = 0;
-					}
-					t -= g; // decrease theta
-					D -= 0.1; // decrease size
-				}
-				if(!bool) {
-					t += g; // increase theta
-					D += 0.1; // increase size
-				}
-				q = (R / r - 1) * t; // create hypotrochoid from current mouse position, and setup variables (see: http://en.wikipedia.org/wiki/Hypotrochoid)
-				x = (R - r) * C(t) + D * C(q) + (A + (X - A) * (i / 25)) + (r - R); // center on xy coords
-				y = (R - r) * S(t) - D * S(q) + (B + (Y - B) * (i / 25));
-				if (a) { // draw once two points are set
-					c.moveTo(a, b);
-					c.lineTo(x, y)
-				}
-				c.strokeStyle = "hsla(" + (U % 360) + ",100%,50%,0.75)"; // draw rainbow hypotrochoid
-				c.stroke();
-				a = x; // set previous coord.x
-				b = y; // set previous coord.y
-			}
-			U -= 0.5; // increment hue
-			A = X; // set original coord.x
-			B = Y; // set original coord.y
-		}, 16);
-	}
-	j.onkeydown = function(e) { a=b=0; R += 0.05 }
-	d.onmousemove({pageX:300, pageY:290})
-}
+<!doctype html>
 
-</script>
+<html lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>Canvas Cycle: True 8-bit Color Cycling with HTML5</title>
+	<meta name="generator" content="TextMate http://macromates.com/">
+	<meta name="author" content="Joseph Huckaby">
+	<meta http-equiv="X-UA-Compatible" content="chrome=1">
+	<!-- Date: 2010-07-17 -->
+	<link rel="stylesheet" type="text/css" href="style.css" >
+	
+	<script type="text/javascript" src="oop.js"></script>
+	<script type="text/javascript" src="tools.js"></script>
+	<script type="text/javascript" src="cookie.js"></script>
+	<script type="text/javascript" src="palette.js"></script>
+	<script type="text/javascript" src="bitmap.js"></script>
+	<script type="text/javascript" src="scenes.js"></script>
+	<script type="text/javascript" src="tween.js"></script>
+	<script type="text/javascript" src="framecount.js"></script>
+	<script type="text/javascript" src="main.js"></script>
+	
 </head>
 <body>
-<canvas id="c"></canvas>
+	
+	<div id="container">
+		<div id="d_header">
+			<div id="d_scene_selector"></div>
+			<div id="d_scene_btns">
+				<div class="button left" onClick="CC.jumpScene(-1)">&lt; Prev</div><div class="button right" onClick="CC.jumpScene(1)">Next &gt;</div>
+			</div>
+			<div id="d_options_control">
+				<div id="btn_options_toggle" class="button left right" onClick="CC.toggleOptions()">Show Options &#x00BB;</div>
+			</div>
+			<div class="clear"></div>
+		</div>
+		<div id="d_loading"></div>
+		
+		<canvas id="mycanvas" width="640" height="480" style=""></canvas>
+		
+		<div id="d_options">
+			<div class="label">SOUND:</div>
+			<div class="section">
+				<div id="btn_sound_off" class="button left" onClick="CC.setSound(false)">Off</div><div id="btn_sound_on" class="button right selected" onClick="CC.setSound(true)">On</div>
+			</div>
+			
+			<div class="label">ZOOM:</div>
+			<div class="section">
+				<div id="btn_zoom_actual" class="button left selected" onClick="CC.setZoom(false)">Actual</div><div id="btn_zoom_max" class="button right" onClick="CC.setZoom(true)">Max</div>
+			</div>
+			
+			<div class="label">CYCLE SPEED:</div>
+			<div class="section">
+				<div id="btn_speed_025" class="button thin left" onClick="CC.setSpeed(0.25)">&frac14;</div><div id="btn_speed_05" class="button thin" onClick="CC.setSpeed(0.5)">&frac12;</div><div id="btn_speed_1" class="button thin selected" onClick="CC.setSpeed(1)">1</div><div id="btn_speed_2" class="button thin" onClick="CC.setSpeed(2)">2</div><div id="btn_speed_4" class="button thin right" onClick="CC.setSpeed(4)">4</div>
+			</div>
+			
+			<div class="label">CYCLE MODE:</div>
+			<div class="section">
+				<div id="btn_blendshift_off" class="button left" onClick="CC.setBlendShift(false)">Standard</div><div id="btn_blendshift_on" class="button right selected" onClick="CC.setBlendShift(true)">Blend</div>
+			</div>
+			
+			<div class="label">PALETTE:</div>
+			<div id="palette_display"></div>
+			
+			<div id="d_debug"></div>
+		</div>
+		
+		<div class="clear"></div>
+
+	</div>
+	
+	<div id="d_footer" title="http://pixfabrik.com/livingworlds/" onMouseUp="location='http://pixfabrik.com/livingworlds/';">
+		<div class="app_icon"></div>
+		<div style="margin-top:5px;"><b>Now available on mobile: Living Worlds for iOS and Android!</b></div>
+		<div>See the original versions of Mark Ferrari's worlds in their full glory!</div>
+	</div>
+		
+	<script language="JavaScript">
+		if (document.addEventListener) {
+			// Good browsers
+			document.addEventListener( "DOMContentLoaded", function() {
+				document.removeEventListener( "DOMContentLoaded", arguments.callee, false );
+				CC.init();
+			}, false );
+
+			// Just in case
+			window.addEventListener( "load", function() {
+				window.removeEventListener( "load", arguments.callee, false );
+				CC.init();
+			}, false );
+			
+			window.addEventListener( "resize", function() {
+				CC.handleResize();
+			}, false );
+		}
+		else if (window.attachEvent) {
+			// Bad browsers have to wait
+			/* window.attachEvent("onload", function() {
+				setTimeout( function() { CC.init(); }, 1000 );
+			});
+			
+			window.attachEvent("onresize", function() {
+				CC.handleResize();
+			}); */
+			
+			// chrome frame
+			// CFInstall.check({ mode: "overlay" });
+		}
+	</script>
+	
+	<script type="text/javascript"> var _gaq = _gaq || [];_gaq.push(['_setAccount', 'UA-5875241-1']);_gaq.push(['_trackPageview']); (function() {var ga = document.createElement('script');ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';ga.setAttribute('async', 'true');document.documentElement.firstChild.appendChild(ga);})(); </script>
+	
 </body>
 </html>
