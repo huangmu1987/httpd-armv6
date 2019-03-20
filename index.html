@@ -1,294 +1,76 @@
 
+<!--
+WebGL Water
+http://madebyevan.com/webgl-water/
+
+Copyright 2011 Evan Wallace
+Released under the MIT license
+-->
+
 <!DOCTYPE html>
-<html lang="en">
-	<head>
-		<meta charset="utf-8">
+<html><head>
+  <title>WebGL Water</title>
+  <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+  <script src="OES_texture_float_linear-polyfill.js"></script>
+  <script src="lightgl.js"></script>
+  <script src="cubemap.js"></script>
+  <script src="renderer.js"></script>
+  <script src="water.js"></script>
+  <script src="main.js"></script>
+  <style type="text/css">
+    body { font: 13px/140% Arial, sans-serif; background: black; color: white; overflow: hidden; }
+    a { color: inherit; cursor: pointer; }
+    img { display: none; }
+    ul { padding: 0 0 0 20px; }
+    h1 { font: bold italic 30px/30px Georgia; text-align: center; }
+    h2 { font: bold italic 17px/17px Georgia; padding-top: 10px; }
+    small { display: block; font-size: 11px; line-height: 15px; }
+    canvas { position: absolute; top: 0; left: 0; }
+    #help { position: absolute; top: 0; right: 0; bottom: 0; width: 280px; padding-right: 20px; overflow: auto; }
+    #loading { position: absolute; left: 0; top: 50%; right: 300px; text-align: center; margin-top: -8px; }
+    @media (max-width: 600px) {
+      small { font-size: 8px; line-height: 10px; }
+      #help { width: 100px; font-size: 10px; line-height: 12px; }
+    }
+  </style>
+</head><body>
+  <div id="loading">Loading...</div>
+  <div id="help">
+    <h1>WebGL Water</h1>
+    <p>Made by <a href="http://madebyevan.com/">Evan Wallace</a></p>
+    <p>This demo requires a decent graphics card and up-to-date drivers. If you can't run the demo, you can still <a href="http://youtube.com/watch?v=R0O_9bp3EKQ">see it on YouTube</a>.</p>
+    <h2>Interactions:</h2>
+    <ul>
+      <li>Draw on the water to make ripples</li>
+      <li>Drag the background to rotate the camera</li>
+      <li>Press SPACEBAR to pause and unpause</li>
+      <li>Drag the sphere to move it around</li>
+      <li>Press the L key to set the light direction</li>
+      <li>Press the G key to toggle gravity</li>
+    </ul>
+    <h2>Features:</h2>
+    <ul>
+      <li>Raytraced reflections and refractions</li>
+      <li>Analytic ambient occlusion</li>
+      <li>Heightfield water simulation *</li>
+      <li>Soft shadows</li>
+      <li>Caustics (see <a href="https://medium.com/@evanwallace/rendering-realtime-caustics-in-webgl-2a99a29a0b2c">this</a> for details) **</li>
+    </ul>
+    <p><small>* requires the OES_texture_float extension<br>** requires the OES_standard_derivatives extension</small></p>
+    <p><small>Tile texture from <a href="http://www.flickr.com/photos/zooboing/3682834083/">zooboing</a> on Flickr</small></p>
+  </div>
+  <img id="tiles" src="tiles.jpg">
+  <img id="xneg" src="xneg.jpg">
+  <img id="xpos" src="xpos.jpg">
+  <img id="ypos" src="ypos.jpg">
+  <img id="zneg" src="zneg.jpg">
+  <img id="zpos" src="zpos.jpg">
+</body></html>
+<script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
 
-		<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-
-		<meta name="description" content="A drawing application that lets you save and share replays of your work with friends." />
-		<meta name="author" content="Hakim El Hattab" />
-
-		<meta name="apple-mobile-web-app-capable" content="yes" />
-		<meta name="viewport" content="width=1024, user-scalable=no" />
-
-		<meta property="fb:admins" content="726190751" />
-		<meta property="fb:app_id" content="433337680065765" />
-
-		<meta property="og:image" content="https://d1835mevib0k1p.cloudfront.net/sketch/icon-200.png" />
-		<meta property="og:title" content="Sketch Toy" />
-		<meta property="og:description" content="Draw sketches and share replays with friends!" />
-
-		<link rel="apple-touch-icon" sizes="57x57" href="https://d1835mevib0k1p.cloudfront.net/sketch/r/5/apple-touch-icon-114.png" />
-		<link rel="apple-touch-icon" sizes="114x114" href="https://d1835mevib0k1p.cloudfront.net/sketch/r/5/apple-touch-icon-114.png" />
-		<link rel="apple-touch-icon" sizes="72x72" href="https://d1835mevib0k1p.cloudfront.net/sketch/r/5/apple-touch-icon-144.png" />
-		<link rel="apple-touch-icon" sizes="144x144" href="https://d1835mevib0k1p.cloudfront.net/sketch/r/5/apple-touch-icon-144.png" />
-
-		<title>Sketch Toy: Draw sketches and share replays with friends!</title>
-
-		<link href="https://d1835mevib0k1p.cloudfront.net/sketch/r/79/sketch.min.css" rel="stylesheet" media="screen" />
-
-		<script>
-		var _gaq = _gaq || [];
-		_gaq.push(['_setAccount', 'UA-36691274-1']);
-		_gaq.push(['_trackPageview']);
-
-		(function() {
-			var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-			ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-			var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-		})();
-		</script>
-
-	</head>
-
-	<body>
-
-		<div class="main-container">
-
-			<header>
-				<h1><a href="/"><img alt="Sketch Toy" width="110px" src="https://d1835mevib0k1p.cloudfront.net/sketch/r/79/site-logo-220x84.png?1"></a></h1>
-
-				<div class="share">
-					<span class="facebook-like-wrapper">
-						<div class="fb-like" data-href="http://www.facebook.com/sketchtoy" data-send="false" data-layout="button_count" data-show-faces="false"></div>
-					</span>
-
-					<a href="https://twitter.com/share" class="twitter-share-button" data-url="http://sketchtoy.com/" data-text="Sketch and share replays with friends on @sketchtoy!" data-related="sketchtoy" data-count="none"></a>
-
-					<a href="https://twitter.com/SketchToy" class="twitter-follow-button" data-show-count="false"></a>
-				</div>
-
-				<div class="right">
-					<div class="select-language loading">
-						<div class="button"><span class="label">Language:</span> <span class="value"></span></div>
-						<ul class="list">
-							<li data-language="en">English</li>
-							<li data-language="es">Español</li>
-							<li data-language="pl">Polski</li>
-							<li data-language="pt">Português</li>
-							<li data-language="tr">Türkçe</li>
-						</ul>
-					</div>
-
-					<!-- <div class="facebook-connect loading">
-						<a class="connect-button" href="#"></a>
-						<div class="contents"></div>
-					</div> -->
-
-					<!-- <a class="facebook-invite" href="#"></a> -->
-				</div>
-			</header>
-
-			<div class="toolbar">
-				<div class="btn new-button green" title="New sketch" name="new-button">New</div>
-				<div class="btn save-button green" title="Save the sketch" name="save-button">Save</div>
-
-				<div class="divider"></div>
-
-				<div class="btn undo-button" title="Undo last action" name="undo-button">Undo</div>
-				<div class="btn eraser-toggle" title="Eraser" name="eraser-toggle">Eraser</div>
-
-				<div class="dropdown size-dropdown">
-					<div class="btn dropdown-title"><span class="label">Size:</span> <span class="value"></span></div>
-					<div class="dropdown-list">
-						<ul class="dropdown-list-inner">
-							<li><div class="dropdown-item" data-value="0.5" class="small"><span style="width: 1px; height: 1px;"></span></div></li>
-							<li><div class="dropdown-item" data-value="1" class="small"><span style="width: 2px; height: 2px;"></span></div></li>
-							<li><div class="dropdown-item" data-value="2" class="small"><span style="width: 3px; height: 3px;"></span></div></li>
-							<li><div class="dropdown-item" data-value="3" class="small"><span style="width: 4px; height: 4px;"></span></div></li>
-							<li><div class="dropdown-item" data-value="4"><span style="width: 6px; height: 6px;"></span></div></li>
-							<li><div class="dropdown-item" data-value="5"><span style="width: 8px; height: 8px;"></span></div></li>
-							<li><div class="dropdown-item" data-value="7"><span style="width: 10px; height: 10px;"></span></div></li>
-							<li><div class="dropdown-item" data-value="9"><span style="width: 12px; height: 12px;"></span></div></li>
-							<li><div class="dropdown-item" data-value="16"><span style="width: 16px; height: 16px;"></span></div></li>
-							<li><div class="dropdown-item" data-value="32" class="large"><span style="width: 28px; height: 28px;"></span></div></li>
-							<li><div class="dropdown-item" data-value="64" class="xlarge"><span style="width: 50px; height: 50px;"></span></div></li>
-						</ul>
-					</div>
-				</div>
-
-				<div class="dropdown vibration-dropdown">
-					<div class="btn dropdown-title"><span class="label">Vibration:</span> <span class="value"></span></div>
-					<div class="dropdown-list auto-width">
-						<ul class="dropdown-list-inner">
-							<li><div class="dropdown-item" data-value="0">0</div></li>
-							<li><div class="dropdown-item" data-value="1">1</div></li>
-							<li><div class="dropdown-item" data-value="2">2</div></li>
-							<li><div class="dropdown-item" data-value="3">3</div></li>
-							<li><div class="dropdown-item" data-value="5">5</div></li>
-							<li><div class="dropdown-item" data-value="10">10</div></li>
-							<li><div class="dropdown-item" data-value="20">20</div></li>
-						</ul>
-					</div>
-				</div>
-
-				<div class="dropdown color-dropdown">
-					<div class="btn dropdown-title"><span class="label"></span> <span class="value"></span></div>
-					<div class="dropdown-list">
-						<ul class="dropdown-list-inner">
-							<li><div class="dropdown-item" data-value="#000000" style="background: #000000;">&nbsp;</div></li>
-							<li><div class="dropdown-item" data-value="#555555" style="background: #555555;">&nbsp;</div></li>
-							<li><div class="dropdown-item" data-value="#999999" style="background: #999999;">&nbsp;</div></li>
-							<li><div class="dropdown-item" data-value="#0a67a3" style="background: #0a67a3;">&nbsp;</div></li>
-							<li><div class="dropdown-item" data-value="#3e97d1" style="background: #3e97d1;">&nbsp;</div></li>
-							<li><div class="dropdown-item" data-value="#8ec9ef" style="background: #8ec9ef;">&nbsp;</div></li>
-							<li><div class="dropdown-item" data-value="#ff0000" style="background: #ff0000;">&nbsp;</div></li>
-							<li><div class="dropdown-item" data-value="#f56c36" style="background: #f56c36;">&nbsp;</div></li>
-							<li><div class="dropdown-item" data-value="#f8a881" style="background: #f8a881;">&nbsp;</div></li>
-							<li><div class="dropdown-item" data-value="#407f1a" style="background: #407f1a;">&nbsp;</div></li>
-							<li><div class="dropdown-item" data-value="#7ed616" style="background: #7ed616;">&nbsp;</div></li>
-							<li><div class="dropdown-item" data-value="#ddec38" style="background: #ddec38;">&nbsp;</div></li>
-							<li><div class="dropdown-item" data-value="#a15f9d" style="background: #a15f9d;">&nbsp;</div></li>
-							<li><div class="dropdown-item" data-value="#f580e3" style="background: #f580e3;">&nbsp;</div></li>
-							<li><div class="dropdown-item" data-value="#ffff00" style="background: #ffff00;">&nbsp;</div></li>
-							<li><div class="dropdown-item" data-value="#8a5025" style="background: #8a5025;">&nbsp;</div></li>
-							<li><div class="dropdown-item" data-value="#ef934d" style="background: #ef934d;">&nbsp;</div></li>
-							<li><div class="dropdown-item" data-value="#ffffff" style="background: #ffffff;">&nbsp;</div></li>
-						</ul>
-					</div>
-				</div>
-			</div>
-
-			<br>
-
-			<div class="share-overlay">
-				<div class="inner">
-					<a class="close" href="#"></a>
-					<div class="url">
-						<p class="label">Link:</p>
-						<input type="text" readonly value="" />
-					</div>
-					<div class="share">
-						<a class="share-facebook" href="#"><span class="label">Share</span> <span class="icon"></span></a>
-						<a class="share-facebook-message" href="#"><span class="label">Send Message</span> <span class="icon"></span></a>
-						<!-- <a class="share-facebook-photo" href="#"><span class="label">Upload Photo</span> <span class="icon"></span></a> -->
-						<a class="share-twitter" href="#"><span class="label">Tweet</span> <span class="icon"></span></a>
-						<a class="share-email" href="#"><span class="label">Email</span> <span class="icon"></span></a>
-						<a class="share-download" href="#"><span class="label">Download Image</span> <span class="icon"></span></a>
-					</div>
-				</div>
-			</div>
-
-			<div class="loading-overlay">
-				<div class="inner">
-					<div class="status"></div>
-					<div class="message"></div>
-				</div>
-			</div>
-
-			<div id="spinner"></div>
-
-			<div class="sketch-canvas-wrapper">
-				<div id="left-pillar">
-					<script type="text/javascript">
-					google_ad_client = "ca-pub-1254673939137008";
-					google_ad_slot = "2711705175";
-					google_ad_width = 120;
-					google_ad_height = 600;
-					</script>
-					<script type="text/javascript" src="https://pagead2.googlesyndication.com/pagead/show_ads.js"></script>
-				</div>
-
-				<div class="sketch-canvas-container">
-					<canvas class="sketch-canvas">
-						<p class="noCanvas">You need a <a href="http://www.google.com/chrome">modern browser</a> to view this.</p>
-					</canvas>
-					<div class="replay-controls">
-						<div class="progress"></div>
-					</div>
-				</div>
-
-				<div id="right-pillar">
-					<script type="text/javascript">
-					google_ad_client = "ca-pub-1254673939137008";
-					google_ad_slot = "4188438377";
-					google_ad_width = 120;
-					google_ad_height = 600;
-					</script>
-					<script type="text/javascript" src="https://pagead2.googlesyndication.com/pagead/show_ads.js"></script>
-				</div>
-			</div>
-
-			<div class="related">
-				<div class="related-gallery"></div>
-			</div>
-
-		</div>
-
-		<footer>
-			<div class="left">
-				<section>
-					<h3>What is this?</h3>
-					<p>
-						Sketch Toy is a free online drawing application that lets you share
-						step-by-step replays of your work with friends. No sign up needed.
-					</p>
-					<a class="chrome-app-link" href="https://chrome.google.com/webstore/detail/sketch-toy/ednofnkligfbacmlfggaccfhpkfopojb" target="_blank">
-						Get the Sketch Toy app for Google Chrome
-					</a>
-				</section>
-			</div>
-
-			<div class="right">
-				<section>
-					<h3>Controls</h3>
-					<p>
-						CTRL+Z to undo, CTRL+E to toggle eraser.
-					</p>
-					<p>
-						Left/right keyboard arrows to rotate in 3D.
-					</p>
-					<p>
-						Drag an image from your desktop onto the canvas to draw a stencil.
-					</p>
-				</section>
-			</div>
-
-			<p class="links">
-				<a href="http://hakim.se/">&copy; 2019 Hakim El Hattab</a> &mdash;
-				<a href="/terms" class="terms">Terms of Service</a> &mdash;
-				<a href="/privacy" class="privacy">Privacy Policy</a> &mdash;
-				<a href="http://facebook.com/sketchtoy">Facebook</a> &mdash;
-				<a href="http://twitter.com/sketchtoy">Twitter</a> &mdash;
-				<a href="https://plus.google.com/+SketchToyApp">Google+</a> &mdash;
-				<a href="http://sketch-toy.tumblr.com">Tumblr</a>
-			</p>
-		</footer>
-
-		<script>
-		var SketchConfig = {
-			autodetectLanguage: false
-		};
-		</script>
-		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
-		<script src="https://d1835mevib0k1p.cloudfront.net/sketch/r/79/sketch.min.js"></script>
-
-		<div id="fb-root"></div>
-		<script>
-
-			window.fbAsyncInit = function() {
-				FB.init({
-					appId      : '433337680065765',
-					version    : 'v2.2',
-					channelUrl : '//sketchtoy.com/facebook/channel.php',
-					status     : true,
-					cookie     : true,
-					xfbml      : true
-				});
-
-				sketch.Facebook.initialize();
-			};
-
-			(function(d, s, id){
-				var js, fjs = d.getElementsByTagName(s)[0];
-				if (d.getElementById(id)) {return;}
-				js = d.createElement(s); js.id = id;
-				js.src = "https://connect.facebook.net/en_US/sdk.js";
-				fjs.parentNode.insertBefore(js, fjs);
-			}(document, 'script', 'facebook-jssdk'));
-
-		</script>
-
-	</body>
-</html>
+ga('create', 'UA-17521220-1', 'auto');
+ga('send', 'pageview');
+</script>
